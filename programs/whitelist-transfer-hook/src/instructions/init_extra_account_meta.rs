@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 use spl_tlv_account_resolution::{
-    account::ExtraAccountMeta, 
-    seeds::Seed, 
-    state::ExtraAccountMetaList
+    account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
 };
 
 #[derive(Accounts)]
@@ -28,18 +26,18 @@ pub struct InitializeExtraAccountMetaList<'info> {
 
 impl<'info> InitializeExtraAccountMetaList<'info> {
     pub fn extra_account_metas() -> Result<Vec<ExtraAccountMeta>> {
-        Ok(
-            vec![
-                ExtraAccountMeta::new_with_seeds(
-                    &[
-                        Seed::Literal {
-                            bytes: b"whitelist".to_vec(),
-                        },
-                    ],
-                    false, // is_signer
-                    false // is_writable
-                )?
-            ]
-        )
+        Ok(vec![ExtraAccountMeta::new_with_seeds(
+            &[
+                Seed::Literal {
+                    bytes: b"whitelist".to_vec(),
+                },
+                // Seed::Literal {
+                //     bytes: payer.key().to_bytes().to_vec(),
+                // },
+                Seed::AccountKey { index: 0 },
+            ],
+            false, // is_signer
+            false, // is_writable
+        )?])
     }
 }

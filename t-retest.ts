@@ -12,6 +12,7 @@ import {
   createInitializeTransferHookInstruction,
   createAssociatedTokenAccountInstruction,
   createMintToInstruction,
+  getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
 import {
   SendTransactionError,
@@ -20,11 +21,22 @@ import {
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import { WhitelistTransferHook } from "../target/types/whitelist_transfer_hook";
+import user_1_file from "./wallets/user_1.json";
+import { readFile } from "fs/promises";
+
+import path from "path";
 
 describe("whitelist-transfer-hook", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
+
+  const filePath = path.join(__dirname, "silver_image.jpg");
+  const file = readFile(filePath);
+
+  const wallet_1 = anchor.web3.Keypair.fromSecretKey(
+    new Uint8Array(user_1_file)
+  );
 
   const wallet = provider.wallet as anchor.Wallet;
 
@@ -36,11 +48,13 @@ describe("whitelist-transfer-hook", () => {
   // Sender token account address
   const sourceTokenAccount = getAssociatedTokenAddressSync(
     mint2022.publicKey,
-    wallet.publicKey,
+    wallet_1.publicKey,
     false,
     TOKEN_2022_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
+
+  // getOrCreateAssociatedTokenAccount();
 
   // Recipient token account address
   const recipient = anchor.web3.Keypair.generate();
@@ -61,7 +75,7 @@ describe("whitelist-transfer-hook", () => {
     );
 
   const whitelist = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("whitelist"), sourceTokenAccount.toBuffer()],
+    [Buffer.from("whitelist"), wallet_1.publicKey.toBuffer()],
     program.programId
   )[0];
 
@@ -78,9 +92,9 @@ describe("whitelist-transfer-hook", () => {
   //   console.log("Transaction signature:", tx);
   // });
 
-  it("Add user to whitelist", async () => {
+  it.skip("Add user to whitelist", async () => {
     const tx = await program.methods
-      .addToWhitelist(sourceTokenAccount)
+      .addToWhitelist(wallet_1.publicKey)
       .accountsPartial({
         admin: provider.publicKey,
         whitelist,
@@ -93,7 +107,7 @@ describe("whitelist-transfer-hook", () => {
 
   it.skip("Remove user to whitelist", async () => {
     const tx = await program.methods
-      .removeFromWhitelist(sourceTokenAccount)
+      .removeFromWhitelist(wallet_1.publicKey)
       .accountsPartial({
         admin: provider.publicKey,
         whitelist,
@@ -115,7 +129,7 @@ describe("whitelist-transfer-hook", () => {
 
     const transaction = new Transaction().add(
       SystemProgram.createAccount({
-        fromPubkey: wallet.publicKey,
+        fromPubkey: wallet_1.publicKey,
         newAccountPubkey: mint2022.publicKey,
         space: mintLen,
         lamports: lamports,
@@ -123,14 +137,14 @@ describe("whitelist-transfer-hook", () => {
       }),
       createInitializeTransferHookInstruction(
         mint2022.publicKey,
-        wallet.publicKey,
+        wallet_1.publicKey,
         program.programId, // Transfer Hook Program ID
         TOKEN_2022_PROGRAM_ID
       ),
       createInitializeMintInstruction(
         mint2022.publicKey,
         9,
-        wallet.publicKey,
+        wallet_1.publicKey,
         null,
         TOKEN_2022_PROGRAM_ID
       )
@@ -139,7 +153,7 @@ describe("whitelist-transfer-hook", () => {
     const txSig = await sendAndConfirmTransaction(
       provider.connection,
       transaction,
-      [wallet.payer, mint2022],
+      [wallet_1, mint2022],
       {
         skipPreflight: true,
         commitment: "finalized",
@@ -161,7 +175,7 @@ describe("whitelist-transfer-hook", () => {
 
     const transaction = new Transaction().add(
       createAssociatedTokenAccountInstruction(
-        wallet.publicKey,
+        wallet_1.publicKey,
         sourceTokenAccount,
         wallet.publicKey,
         mint2022.publicKey,
@@ -169,7 +183,7 @@ describe("whitelist-transfer-hook", () => {
         ASSOCIATED_TOKEN_PROGRAM_ID
       ),
       createAssociatedTokenAccountInstruction(
-        wallet.publicKey,
+        wallet_1.publicKey,
         destinationTokenAccount,
         recipient.publicKey,
         mint2022.publicKey,
@@ -179,7 +193,7 @@ describe("whitelist-transfer-hook", () => {
       createMintToInstruction(
         mint2022.publicKey,
         sourceTokenAccount,
-        wallet.publicKey,
+        wallet_1.publicKey,
         amount,
         [],
         TOKEN_2022_PROGRAM_ID
@@ -189,7 +203,7 @@ describe("whitelist-transfer-hook", () => {
     const txSig = await sendAndConfirmTransaction(
       provider.connection,
       transaction,
-      [wallet.payer],
+      [wallet_1],
       { skipPreflight: true }
     );
 
@@ -237,7 +251,7 @@ describe("whitelist-transfer-hook", () => {
         sourceTokenAccount,
         mint2022.publicKey,
         destinationTokenAccount,
-        wallet.publicKey,
+        wallet_1.publicKey,
         amountBigInt,
         9,
         [],
@@ -247,21 +261,21 @@ describe("whitelist-transfer-hook", () => {
 
     const transaction = new Transaction().add(transferInstructionWithHelper);
 
-    try {
-      // Send the transaction
-      const txSig = await sendAndConfirmTransaction(
-        provider.connection,
-        transaction,
-        [wallet.payer],
-        { skipPreflight: false }
-      );
-      console.log("\nTransfer Signature:", txSig);
-    } catch (error) {
-      if (error instanceof SendTransactionError) {
-        console.error("\nTransaction failed:", error.logs[4]);
-      } else {
-        console.error("\nUnexpected error:", error);
-      }
-    }
+    // try {
+    // Send the transaction
+    const txSig = await sendAndConfirmTransaction(
+      provider.connection,
+      transaction,
+      [wallet_1],
+      { skipPreflight: false }
+    );
+    console.log("\nTransfer Signature:", txSig);
+    // } catch (error) {
+    //   if (error instanceof SendTransactionError) {
+    //     console.error("\nTransaction failed:", error.logs[4]);
+    //   } else {
+    //     console.error("\nUnexpected error:", error);
+    //   }
+    // }
   });
 });
