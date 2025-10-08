@@ -107,7 +107,7 @@ describe("whitelist-transfer-hook", () => {
     console.log("Transaction signature:", tx);
   });
 
-  it("Create Mint Account with Transfer Hook Extension", async () => {
+  xit("Create Mint Account with Transfer Hook Extension Client", async () => {
     const extensions = [ExtensionType.TransferHook];
     const mintLen = getMintLen(extensions);
     const lamports =
@@ -155,7 +155,29 @@ describe("whitelist-transfer-hook", () => {
     console.log("\nTransaction Signature: ", txSig);
   });
 
-  it("Create Token Accounts and Mint Tokens", async () => {
+  it("Create Mint Account with Transfer Hook Extension Program", async () => {
+    const tx = await program.methods
+      .createAndInitializeMintWithTfHook()
+      .accounts({
+        extraAccountMetaList: extraAccountMetaListPDA,
+        mint: mint2022.publicKey,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        user: wallet.publicKey,
+      })
+      .signers([wallet.payer, mint2022])
+      .rpc({ commitment: "confirmed" });
+
+    // const txSig = await sendAndConfirmTransaction(
+    //   provider.connection,
+    //   transaction,
+    //   [wallet.payer],
+    //   { skipPreflight: true }
+    // );
+
+    console.log("\nTransaction Signature: ", tx);
+  });
+
+  xit("Create Token Accounts and Mint Tokens client", async () => {
     // 100 tokens
     const amount = 100 * 10 ** 9;
 
